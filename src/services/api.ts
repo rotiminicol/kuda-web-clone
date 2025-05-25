@@ -1,3 +1,4 @@
+
 // Base API configuration
 const AUTH_BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:Ye7qAxAj';
 const API_BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:kQC-7-zf';
@@ -61,6 +62,7 @@ export const authAPI = {
     
     const signupData = {
       ...userData,
+      name: `${userData.firstName} ${userData.lastName}`,
       accountNumber,
       balance: 20000, // Starting balance of 20k
     };
@@ -87,6 +89,13 @@ export const authAPI = {
     return makeRequest(`${AUTH_BASE_URL}/auth/me`);
   },
 
+  updateBalance: async (newBalance: number) => {
+    return makeRequest(`${AUTH_BASE_URL}/auth/me`, {
+      method: 'PATCH',
+      body: JSON.stringify({ balance: newBalance }),
+    });
+  },
+
   logout: () => {
     localStorage.removeItem('authToken');
   },
@@ -96,7 +105,13 @@ export const authAPI = {
 export const transactionAPI = {
   getAll: () => makeRequest(`${API_BASE_URL}/transaction`),
   getById: (id: string) => makeRequest(`${API_BASE_URL}/transaction/${id}`),
-  create: (data: any) => makeRequest(`${API_BASE_URL}/transaction`, {
+  create: (data: {
+    type: 'debit' | 'credit';
+    amount: number;
+    description: string;
+    recipient?: string;
+    reference?: string;
+  }) => makeRequest(`${API_BASE_URL}/transaction`, {
     method: 'POST',
     body: JSON.stringify(data),
   }),

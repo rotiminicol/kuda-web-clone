@@ -1,14 +1,16 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Send, Clock } from "lucide-react";
+import { ArrowLeft, Send, Clock, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useToast } from "@/hooks/use-toast";
+import { paystackService, Bank } from "@/services/paystack";
+import { transactionAPI, authAPI } from "@/services/api";
 
 const Transfer = () => {
   const [transferType, setTransferType] = useState("kuda");
@@ -16,22 +18,74 @@ const Transfer = () => {
   const [recipient, setRecipient] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [selectedBank, setSelectedBank] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [userData, setUserData] = useState<any>(null);
   const { toast } = useToast();
 
-  const recentRecipients = [
-    { name: "Jane Smith", bank: "Kuda Bank", account: "1234567890" },
-    { name: "Mike Johnson", bank: "GTBank", account: "0123456789" },
-    { name: "Sarah Wilson", bank: "Access Bank", account: "9876543210" },
-  ];
+  // Fetch banks and user data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [banksData, userResponse, transactionsResponse] = await Promise.all([
+          paystackService.getBanks(),
+          authAPI.getMe(),
+          transactionAPI.getAll().catch(() => [])
+        ]);
+        
+        setBanks(banksData);
+        setUserData(userResponse);
+        setTransactions(transactionsResponse);
+        console.log('Transfer data loaded:', { banks: banksData.length, user: userResponse });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load transfer data",
+          variant: "destructive"
+        });
+      }
+    };
 
-  const transactionHistory = [
-    { id: 1, type: "sent", recipient: "Jane Smith", amount: 15000, date: "Today", status: "successful" },
-    { id: 2, type: "received", sender: "Mike Johnson", amount: 25000, date: "Yesterday", status: "successful" },
-    { id: 3, type: "sent", recipient: "Sarah Wilson", amount: 8500, date: "2 days ago", status: "successful" },
-    { id: 4, type: "sent", recipient: "David Brown", amount: 12000, date: "3 days ago", status: "pending" },
-  ];
+    fetchData();
+  }, [toast]);
 
-  const handleTransfer = () => {
+  // Verify account when account number and bank are provided
+  useEffect(() => {
+    const verifyAccount = async () => {
+      if (transferType !== "kuda" && recipient.length === 10 && selectedBank) {
+        setVerifyingAccount(true);
+        try {
+          const bankData = banks.find(bank => bank.code === selectedBank);
+          if (bankData) {
+            const verification = await paystackService.verifyAccount(recipient, selectedBank);
+            setAccountName(verification.account_name);
+            toast({
+              title: "Account Verified",
+              description: `${verification.account_name} - ${bankData.name}`,
+            });
+          }
+        } catch (error) {
+          console.error('Account verification failed:', error);
+          setAccountName("");
+          toast({
+            title: "Verification Failed",
+            description: "Could not verify account details",
+            variant: "destructive"
+          });
+        } finally {
+          setVerifyingAccount(false);
+        }
+      }
+    };
+
+    verifyAccount();
+  }, [recipient, selectedBank, transferType, banks, toast]);
+
+  const handleTransfer = async () => {
     if (!amount || !recipient) {
       toast({
         title: "Error",
@@ -41,22 +95,79 @@ const Transfer = () => {
       return;
     }
 
+    const transferAmount = parseFloat(amount);
+    
+    if (transferAmount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid amount.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (userData?.balance < transferAmount) {
+      toast({
+        title: "Insufficient Funds",
+        description: "You don't have enough balance for this transfer.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+    
+    try {
+      // Create transaction record
+      const transactionData = {
+        type: 'debit' as const,
+        amount: transferAmount,
+        description: description || `Transfer to ${accountName || recipient}`,
+        recipient: accountName || recipient,
+        reference: `TXN_${Date.now()}`
+      };
+
+      await transactionAPI.create(transactionData);
+      
+      // Update user balance
+      const newBalance = userData.balance - transferAmount;
+      await authAPI.updateBalance(newBalance);
+
       toast({
         title: "Transfer Successful!",
-        description: `₦${amount} sent to ${recipient}.`,
+        description: `₦${transferAmount.toLocaleString()} sent successfully.`,
       });
-      setLoading(false);
+
+      // Reset form
       setAmount("");
       setRecipient("");
       setDescription("");
-    }, 2000);
+      setAccountName("");
+      setSelectedBank("");
+
+      // Refresh transactions and user data
+      const [updatedTransactions, updatedUser] = await Promise.all([
+        transactionAPI.getAll(),
+        authAPI.getMe()
+      ]);
+      setTransactions(updatedTransactions);
+      setUserData(updatedUser);
+
+    } catch (error) {
+      console.error('Transfer failed:', error);
+      toast({
+        title: "Transfer Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 pb-20">
+      <div className="container mx-auto px-4 py-6 pb-20 max-w-md">
         {/* Header */}
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="sm" asChild className="mr-2">
@@ -67,10 +178,22 @@ const Transfer = () => {
           <h1 className="text-2xl font-bold text-gray-900">Transfer Money</h1>
         </div>
 
+        {/* Balance Display */}
+        {userData && (
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Available Balance</p>
+                <p className="text-2xl font-bold text-green-600">₦{userData.balance?.toLocaleString() || '0'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Transfer Type Selector */}
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 variant={transferType === "kuda" ? "default" : "outline"}
                 size="sm"
@@ -86,14 +209,6 @@ const Transfer = () => {
                 className={transferType === "bank" ? "bg-primary-600" : ""}
               >
                 Other Banks
-              </Button>
-              <Button
-                variant={transferType === "international" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTransferType("international")}
-                className={transferType === "international" ? "bg-primary-600" : ""}
-              >
-                International
               </Button>
             </div>
           </CardContent>
@@ -124,18 +239,36 @@ const Transfer = () => {
             {transferType !== "kuda" && (
               <div className="space-y-2">
                 <Label htmlFor="bank">Bank</Label>
-                <Select>
+                <Select value={selectedBank} onValueChange={setSelectedBank}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Select bank" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gtbank">GTBank</SelectItem>
-                    <SelectItem value="access">Access Bank</SelectItem>
-                    <SelectItem value="zenith">Zenith Bank</SelectItem>
-                    <SelectItem value="first">First Bank</SelectItem>
-                    <SelectItem value="uba">UBA</SelectItem>
+                    {banks.map((bank) => (
+                      <SelectItem key={bank.code} value={bank.code}>
+                        {bank.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {accountName && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">{accountName}</span>
+                </div>
+              </div>
+            )}
+
+            {verifyingAccount && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-blue-800">Verifying account...</span>
+                </div>
               </div>
             )}
 
@@ -165,39 +298,10 @@ const Transfer = () => {
             <Button
               onClick={handleTransfer}
               className="w-full h-12 bg-primary-600 hover:bg-primary-700"
-              disabled={loading}
+              disabled={loading || verifyingAccount}
             >
               {loading ? "Processing..." : `Send ₦${amount || "0"}`}
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Recent Recipients */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Recipients</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="space-y-1">
-              {recentRecipients.map((recipient, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setRecipient(recipient.account)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-primary-600 font-medium">{recipient.name[0]}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{recipient.name}</p>
-                      <p className="text-sm text-gray-500">{recipient.bank}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500">{recipient.account}</p>
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
 
@@ -206,50 +310,48 @@ const Transfer = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Transaction History
+              Recent Transactions
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-1">
-              {transactionHistory.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === "received" ? "bg-green-100" : "bg-red-100"
-                    }`}>
-                      <span className={`text-sm ${
-                        transaction.type === "received" ? "text-green-600" : "text-red-600"
+            {transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Send className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No transactions yet</h3>
+                <p className="text-gray-500">Your transfer history will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {transactions.map((transaction) => (
+                  <div key={transaction.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        transaction.type === "credit" ? "bg-green-100" : "bg-red-100"
                       }`}>
-                        {transaction.type === "received" ? "+" : "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {transaction.type === "received" 
-                          ? `From ${transaction.sender}` 
-                          : `To ${transaction.recipient}`
-                        }
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-gray-500">{transaction.date}</p>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          transaction.status === "successful" 
-                            ? "bg-green-100 text-green-600" 
-                            : "bg-yellow-100 text-yellow-600"
+                        <span className={`text-sm ${
+                          transaction.type === "credit" ? "text-green-600" : "text-red-600"
                         }`}>
-                          {transaction.status}
+                          {transaction.type === "credit" ? "+" : "-"}
                         </span>
                       </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{transaction.description}</p>
+                        <p className="text-sm text-gray-500">
+                          {transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : 'Recently'}
+                        </p>
+                      </div>
                     </div>
+                    <p className={`font-medium ${
+                      transaction.type === "credit" ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {transaction.type === "credit" ? "+" : "-"}₦{(transaction.amount || 0).toLocaleString()}
+                    </p>
                   </div>
-                  <p className={`font-medium ${
-                    transaction.type === "received" ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {transaction.type === "received" ? "+" : "-"}₦{transaction.amount.toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
