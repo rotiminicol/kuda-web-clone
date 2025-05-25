@@ -1,4 +1,3 @@
-
 // Base API configuration
 const AUTH_BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:Ye7qAxAj';
 const API_BASE_URL = 'https://x8ki-letl-twmt.n7.xano.io/api:kQC-7-zf';
@@ -57,10 +56,19 @@ export const authAPI = {
     phone: string;
     password: string;
   }) => {
+    // Generate account number for new user
+    const accountNumber = generateAccountNumber();
+    
+    const signupData = {
+      ...userData,
+      accountNumber,
+      balance: 20000, // Starting balance of 20k
+    };
+
     const response = await fetch(`${AUTH_BASE_URL}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(signupData),
     });
     
     if (!response.ok) {
@@ -184,4 +192,67 @@ export const userSessionAPI = {
   delete: (id: string) => makeRequest(`${API_BASE_URL}/user_session/${id}`, {
     method: 'DELETE',
   }),
+};
+
+// Paystack API integration
+export const paystackAPI = {
+  getBanks: async () => {
+    const response = await fetch('https://api.paystack.co/bank', {
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_PAYSTACK_SK}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch banks');
+    }
+    
+    return response.json();
+  },
+
+  verifyAccount: async (accountNumber: string, bankCode: string) => {
+    const response = await fetch(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_PAYSTACK_SK}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to verify account');
+    }
+    
+    return response.json();
+  },
+
+  initiateTransfer: async (transferData: {
+    amount: number;
+    recipient: string;
+    reason?: string;
+    reference?: string;
+  }) => {
+    const response = await fetch('https://api.paystack.co/transfer', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_PAYSTACK_SK}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transferData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Transfer failed');
+    }
+    
+    return response.json();
+  },
+};
+
+// Utility function to generate account numbers
+const generateAccountNumber = (): string => {
+  // Generate 10-digit account number starting with 1234 for Kuda
+  const prefix = '1234';
+  const suffix = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+  return prefix + suffix;
 };
