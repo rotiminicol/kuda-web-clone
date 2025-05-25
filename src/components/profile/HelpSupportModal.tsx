@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { X, HelpCircle, Phone, Mail, MessageCircle, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { X, HelpCircle, MessageCircle, Phone, Mail, FileText, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface HelpSupportModalProps {
@@ -16,228 +15,200 @@ interface HelpSupportModalProps {
 
 const HelpSupportModal = ({ isOpen, onClose }: HelpSupportModalProps) => {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'contact' | 'faq'>('contact');
   const [contactForm, setContactForm] = useState({
     subject: "",
     message: "",
-    email: "",
+    urgency: "normal"
   });
+
+  const handleSubmit = () => {
+    // API call to Xano POST /support/ticket
+    toast({
+      title: "Ticket Submitted",
+      description: "We'll get back to you within 24 hours.",
+    });
+    setContactForm({ subject: "", message: "", urgency: "normal" });
+    onClose();
+  };
 
   const faqs = [
     {
-      question: "How do I transfer money to another bank?",
-      answer: "Go to Transfer, select 'Other Banks', enter recipient details, amount, and your transaction PIN to complete the transfer.",
+      question: "How do I transfer money?",
+      answer: "Go to Transfer page, enter recipient details, amount, and confirm with your PIN."
     },
     {
-      question: "What are the transaction limits?",
-      answer: "Daily transfer limit is ₦1,000,000 for Tier 2 accounts. For higher limits, upgrade to Tier 3 with additional verification.",
+      question: "What are the transfer limits?",
+      answer: "Daily limit is ₦100,000 for Tier 2 accounts and ₦500,000 for Tier 3 accounts."
     },
     {
-      question: "How do I upgrade my account tier?",
-      answer: "Visit any Kuda office with valid ID, proof of address, and BVN. You can also start the process in-app under Account Settings.",
+      question: "How do I pay bills?",
+      answer: "Visit Bills section, select service provider, enter details and make payment."
     },
     {
-      question: "How do I block my card?",
-      answer: "Go to Cards section, select your card, and tap 'Block Card'. You can also call our 24/7 hotline immediately.",
+      question: "How to upgrade my account?",
+      answer: "Visit any Kuda branch with valid ID or complete BVN verification in-app."
     },
     {
-      question: "What should I do if I forget my transaction PIN?",
-      answer: "Go to Profile > Account Settings > Change Transaction PIN. You'll need to verify your identity through SMS or email.",
-    },
-    {
-      question: "How do I download my bank statement?",
-      answer: "Go to Transaction History, tap the filter icon, select date range, and tap 'Export Statement' to download PDF.",
-    },
-  ];
-
-  const contactMethods = [
-    {
-      icon: Phone,
-      title: "Call Us",
-      description: "24/7 Customer Support",
-      action: "+234 1 888 KUDA",
-      color: "bg-green-50 text-green-600",
-    },
-    {
-      icon: Mail,
-      title: "Email Support",
-      description: "We reply within 24 hours",
-      action: "help@kuda.com",
-      color: "bg-blue-50 text-blue-600",
-    },
-    {
-      icon: MessageCircle,
-      title: "Live Chat",
-      description: "Chat with our support team",
-      action: "Start Chat",
-      color: "bg-purple-50 text-purple-600",
-    },
-  ];
-
-  const handleContactSubmit = () => {
-    if (!contactForm.subject || !contactForm.message) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
+      question: "What if I forget my PIN?",
+      answer: "Use 'Forgot PIN' option or contact support to reset your transaction PIN."
     }
-    
-    // API call would go here
-    toast({
-      title: "Message Sent",
-      description: "Your support request has been submitted. We'll get back to you soon.",
-    });
-    setContactForm({ subject: "", message: "", email: "" });
-  };
+  ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary-600" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <Card className="w-full h-[95vh] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl border-0 shadow-2xl animate-slide-up">
+        <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md border-b pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <HelpCircle className="h-5 w-5 text-white" />
+            </div>
             Help & Support
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="sm" onClick={onClose} className="rounded-full w-10 h-10 p-0">
+            <X className="h-5 w-5" />
           </Button>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="faq" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="faq">FAQ</TabsTrigger>
-              <TabsTrigger value="contact">Contact</TabsTrigger>
-              <TabsTrigger value="feedback">Feedback</TabsTrigger>
-            </TabsList>
+        <CardContent className="p-0">
+          {/* Tab Navigation */}
+          <div className="flex border-b bg-gray-50">
+            <button
+              onClick={() => setActiveTab('contact')}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeTab === 'contact'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <MessageCircle className="h-4 w-4 inline mr-2" />
+              Contact Us
+            </button>
+            <button
+              onClick={() => setActiveTab('faq')}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeTab === 'faq'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <FileText className="h-4 w-4 inline mr-2" />
+              FAQ
+            </button>
+          </div>
 
-            <TabsContent value="faq" className="space-y-4">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
-                <Accordion type="single" collapsible className="w-full">
-                  {faqs.map((faq, index) => (
-                    <AccordionItem key={index} value={`item-${index}`}>
-                      <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
-                      <AccordionContent className="text-gray-600">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="contact" className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Contact Methods</h3>
-                <div className="grid gap-4">
-                  {contactMethods.map((method, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${method.color}`}>
-                        <method.icon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{method.title}</h4>
-                        <p className="text-sm text-gray-600">{method.description}</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        {method.action}
-                      </Button>
+          <div className="p-6">
+            {activeTab === 'contact' && (
+              <div className="space-y-6">
+                {/* Quick Contact Options */}
+                <div className="grid grid-cols-2 gap-4">
+                  <a 
+                    href="tel:+2347009009009"
+                    className="flex flex-col items-center p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-2">
+                      <Phone className="h-6 w-6 text-white" />
                     </div>
-                  ))}
+                    <span className="text-sm font-medium text-green-700">Call Us</span>
+                    <span className="text-xs text-green-600">700-900-9009</span>
+                  </a>
+                  
+                  <a 
+                    href="mailto:help@kuda.com"
+                    className="flex flex-col items-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-2">
+                      <Mail className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-blue-700">Email Us</span>
+                    <span className="text-xs text-blue-600">help@kuda.com</span>
+                  </a>
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Send us a message</h3>
+                {/* Contact Form */}
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your.email@example.com"
-                      value={contactForm.email}
-                      onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
-                  <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Send us a message</h3>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="subject">Subject</Label>
                     <Input
                       id="subject"
-                      placeholder="Brief description of your issue"
                       value={contactForm.subject}
                       onChange={(e) => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
+                      placeholder="Brief description of your issue"
+                      className="h-12 border-2 focus:border-blue-500 rounded-xl"
                     />
                   </div>
-                  <div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="urgency">Urgency Level</Label>
+                    <select 
+                      value={contactForm.urgency}
+                      onChange={(e) => setContactForm(prev => ({ ...prev, urgency: e.target.value }))}
+                      className="w-full h-12 px-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="low">Low - General inquiry</option>
+                      <option value="normal">Normal - Standard support</option>
+                      <option value="high">High - Account issue</option>
+                      <option value="urgent">Urgent - Security concern</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="message">Message</Label>
-                    <textarea
+                    <Textarea
                       id="message"
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Describe your issue or question in detail..."
                       value={contactForm.message}
                       onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                      placeholder="Please describe your issue in detail..."
+                      className="min-h-32 border-2 focus:border-blue-500 rounded-xl resize-none"
                     />
                   </div>
-                  <Button onClick={handleContactSubmit} className="w-full">
+
+                  <Button 
+                    onClick={handleSubmit}
+                    className="w-full h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl shadow-lg"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
                     Send Message
                   </Button>
                 </div>
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="feedback" className="space-y-6">
+            {activeTab === 'faq' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Help us improve</h3>
-                <p className="text-gray-600">Your feedback helps us make Kuda better for everyone.</p>
-                
-                <div className="space-y-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-3 mb-3">
-                      <FileText className="h-5 w-5 text-primary-600" />
-                      <h4 className="font-semibold">Rate our app</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">How would you rate your experience with Kuda?</p>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Button key={star} variant="outline" size="sm" className="w-10 h-10 p-0">
-                          ⭐
-                        </Button>
-                      ))}
-                    </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
+                {faqs.map((faq, index) => (
+                  <div key={index} className="border border-gray-200 rounded-xl overflow-hidden">
+                    <details className="group">
+                      <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <span className="font-medium text-gray-900">{faq.question}</span>
+                        <span className="text-gray-400 group-open:rotate-180 transition-transform">
+                          ▼
+                        </span>
+                      </summary>
+                      <div className="px-4 pb-4 text-gray-600 text-sm leading-relaxed border-t border-gray-100">
+                        {faq.answer}
+                      </div>
+                    </details>
                   </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="font-semibold mb-3">Suggest a feature</h4>
-                    <textarea
-                      rows={3}
-                      className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="What feature would you like to see in Kuda?"
-                    />
-                    <Button className="mt-3 w-full">
-                      Submit Suggestion
-                    </Button>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="font-semibold mb-3">Report a bug</h4>
-                    <textarea
-                      rows={3}
-                      className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Describe the bug or issue you encountered..."
-                    />
-                    <Button className="mt-3 w-full">
-                      Report Bug
-                    </Button>
-                  </div>
-                </div>
+                ))}
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
+
+          {/* Close Button */}
+          <div className="p-6 border-t">
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              className="w-full h-12 rounded-xl border-2 hover:bg-gray-50"
+            >
+              Close
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

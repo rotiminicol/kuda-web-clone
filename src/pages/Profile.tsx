@@ -18,7 +18,11 @@ import {
   Mail,
   Phone,
   MapPin,
-  Calendar
+  Calendar,
+  TrendingUp,
+  Eye,
+  Copy,
+  Star
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -32,6 +36,7 @@ import HelpSupportModal from "@/components/profile/HelpSupportModal";
 const Profile = () => {
   const { toast } = useToast();
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [showBalance, setShowBalance] = useState(false);
 
   const profileData = {
     firstName: "John",
@@ -54,66 +59,71 @@ const Profile = () => {
       label: "Personal Information", 
       subtitle: "Update your basic information",
       action: () => setActiveModal("personal"),
-      color: "bg-blue-50 text-blue-600"
+      gradient: "from-violet-500 to-purple-600"
     },
     { 
       icon: Settings, 
       label: "Account Settings", 
       subtitle: "Security and preferences",
       action: () => setActiveModal("settings"),
-      color: "bg-green-50 text-green-600"
+      gradient: "from-emerald-500 to-teal-600"
     },
     { 
       icon: Bell, 
       label: "Notifications", 
       subtitle: "Manage your alerts",
       action: () => setActiveModal("notifications"),
-      color: "bg-yellow-50 text-yellow-600"
+      gradient: "from-amber-500 to-orange-600"
     },
     { 
       icon: HelpCircle, 
       label: "Help & Support", 
       subtitle: "Get assistance",
       action: () => setActiveModal("help"),
-      color: "bg-purple-50 text-purple-600"
+      gradient: "from-blue-500 to-indigo-600"
     },
   ];
 
   const accountStats = [
-    { label: "Total Balance", value: profileData.balance, icon: CreditCard },
-    { label: "Account Tier", value: profileData.tier, icon: Shield },
-    { label: "Active Cards", value: "2", icon: CreditCard },
-    { label: "Monthly Transactions", value: "47", icon: Smartphone },
+    { label: "Account Balance", value: showBalance ? profileData.balance : "••••••", icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
+    { label: "Account Tier", value: profileData.tier, icon: Shield, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Active Cards", value: "2", icon: CreditCard, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "This Month", value: "47 transactions", icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
   const handleLogout = () => {
+    // API call to Xano POST /auth/logout
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
   };
 
-  const handleEditProfile = () => {
-    setActiveModal("personal");
+  const copyAccountNumber = () => {
+    navigator.clipboard.writeText(profileData.accountNumber);
+    toast({
+      title: "Copied!",
+      description: "Account number copied to clipboard",
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-6 pb-24">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6 pb-24 max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <Button variant="ghost" size="sm" asChild className="mr-3">
+            <Button variant="ghost" size="sm" asChild className="mr-3 rounded-full w-10 h-10 p-0">
               <Link to="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
           </div>
           <Button 
-            onClick={handleEditProfile}
+            onClick={() => setActiveModal("personal")}
             size="sm" 
-            className="bg-primary-600 hover:bg-primary-700"
+            className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-full shadow-lg"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit
@@ -121,36 +131,35 @@ const Profile = () => {
         </div>
 
         {/* Profile Header Card */}
-        <Card className="mb-8 border-0 shadow-lg bg-gradient-to-r from-primary-600 to-primary-700 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
-          <CardContent className="p-8 relative z-10">
-            <div className="flex items-start gap-6">
-              <Avatar className="w-20 h-20 border-4 border-white/20">
-                <AvatarImage src="/placeholder-avatar.jpg" alt={`${profileData.firstName} ${profileData.lastName}`} />
-                <AvatarFallback className="bg-white text-primary-600 text-2xl font-bold">
-                  {profileData.firstName[0]}{profileData.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
+        <Card className="mb-6 border-0 shadow-lg bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+          <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-start gap-4">
+              <div className="relative">
+                <Avatar className="w-16 h-16 border-3 border-white/20 shadow-xl">
+                  <AvatarImage src="/placeholder-avatar.jpg" alt={`${profileData.firstName} ${profileData.lastName}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xl font-bold">
+                    {profileData.firstName[0]}{profileData.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
               <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2">{profileData.firstName} {profileData.lastName}</h2>
-                <div className="flex items-center gap-4 text-white/90 mb-3">
-                  <div className="flex items-center gap-1">
-                    <Mail className="h-4 w-4" />
-                    <span className="text-sm">{profileData.email}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
-                    <span className="text-sm">{profileData.phone}</span>
-                  </div>
+                <h2 className="text-xl font-bold mb-1">{profileData.firstName} {profileData.lastName}</h2>
+                <div className="flex items-center gap-2 text-white/80 mb-2">
+                  <Mail className="h-3 w-3" />
+                  <span className="text-sm">{profileData.email}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                  <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                    <Star className="h-3 w-3 mr-1" />
                     {profileData.tier} Verified
                   </Badge>
-                  <div className="flex items-center gap-1 text-sm text-white/80">
-                    <Calendar className="h-4 w-4" />
-                    <span>Joined {profileData.dateJoined}</span>
+                  <div className="flex items-center gap-1 text-xs text-white/70">
+                    <Calendar className="h-3 w-3" />
+                    <span>Since {profileData.dateJoined}</span>
                   </div>
                 </div>
               </div>
@@ -159,17 +168,29 @@ const Profile = () => {
         </Card>
 
         {/* Account Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {accountStats.map((stat, index) => (
-            <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center">
-                    <stat.icon className="h-5 w-5 text-primary-600" />
+                  <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center`}>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">{stat.label}</p>
-                    <p className="font-semibold text-gray-900">{stat.value}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900 truncate">{stat.value}</p>
+                      {stat.label === "Account Balance" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowBalance(!showBalance)}
+                          className="p-1 h-6 w-6"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -178,50 +199,56 @@ const Profile = () => {
         </div>
 
         {/* Account Information */}
-        <Card className="mb-8 border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary-600" />
-              Account Information
+        <Card className="mb-6 border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-violet-600" />
+              Account Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">Account Number</span>
-                <span className="font-semibold">{profileData.accountNumber}</span>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+              <div>
+                <p className="text-sm text-gray-600">Account Number</p>
+                <p className="font-semibold">{profileData.accountNumber}</p>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">Bank</span>
-                <span className="font-semibold">{profileData.bank}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyAccountNumber}
+                className="rounded-full w-8 h-8 p-0"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-sm text-gray-600">Bank</p>
+                <p className="font-semibold text-sm">{profileData.bank}</p>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">Account Type</span>
-                <span className="font-semibold">{profileData.accountType}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">BVN</span>
-                <span className="font-semibold">{profileData.bvn}</span>
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-sm text-gray-600">Account Type</p>
+                <p className="font-semibold text-sm">{profileData.accountType}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Quick Actions */}
-        <Card className="mb-8 border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl">Quick Actions</CardTitle>
+        <Card className="mb-6 border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {quickActions.map((item, index) => (
               <div
                 key={index}
                 onClick={item.action}
-                className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors active:bg-gray-100"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${item.color}`}>
-                    <item.icon className="h-6 w-6" />
+                  <div className={`w-12 h-12 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
+                    <item.icon className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <span className="font-semibold text-gray-900 block">{item.label}</span>
@@ -238,7 +265,7 @@ const Profile = () => {
         <Button
           onClick={handleLogout}
           variant="outline"
-          className="w-full h-12 text-red-600 border-red-200 hover:bg-red-50 border-2"
+          className="w-full h-12 text-red-600 border-red-200 hover:bg-red-50 border-2 rounded-xl"
         >
           <LogOut className="h-4 w-4 mr-2" />
           Logout

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { X, Camera, User, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { X, Camera, User, Mail, Phone, MapPin, Calendar, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PersonalInfoModalProps {
@@ -30,14 +30,19 @@ const PersonalInfoModal = ({ isOpen, onClose, profileData }: PersonalInfoModalPr
     phone: profileData.phone,
     address: profileData.address,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = () => {
-    // API call would go here
-    toast({
-      title: "Profile Updated",
-      description: "Your personal information has been updated successfully.",
-    });
-    onClose();
+  const handleSave = async () => {
+    setIsLoading(true);
+    // Simulate API call to Xano PUT /user/profile
+    setTimeout(() => {
+      toast({
+        title: "Profile Updated",
+        description: "Your personal information has been updated successfully.",
+      });
+      setIsLoading(false);
+      onClose();
+    }, 1500);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -47,61 +52,70 @@ const PersonalInfoModal = ({ isOpen, onClose, profileData }: PersonalInfoModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary-600" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <Card className="w-full h-[95vh] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl border-0 shadow-2xl animate-slide-up">
+        <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md border-b pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <User className="h-5 w-5 text-white" />
+            </div>
             Personal Information
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="sm" onClick={onClose} className="rounded-full w-10 h-10 p-0">
+            <X className="h-5 w-5" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8 p-6">
           {/* Avatar Section */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <Avatar className="w-24 h-24">
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative group">
+              <Avatar className="w-28 h-28 border-4 border-white shadow-xl">
                 <AvatarImage src="/placeholder-avatar.jpg" />
-                <AvatarFallback className="bg-primary-50 text-primary-600 text-2xl">
+                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-3xl font-bold">
                   {formData.firstName[0]}{formData.lastName[0]}
                 </AvatarFallback>
               </Avatar>
               <Button 
                 size="sm" 
-                className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                className="absolute -bottom-2 -right-2 rounded-full w-10 h-10 p-0 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-lg group-hover:scale-110 transition-all duration-200"
               >
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-sm text-gray-500">Click to change profile picture</p>
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-1">Tap camera icon to change</p>
+              <p className="text-xs text-gray-400">JPG, PNG up to 5MB</p>
+            </div>
           </div>
 
           {/* Form Fields */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName">First Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-gray-700 font-medium">First Name</Label>
                 <Input
                   id="firstName"
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  className="h-12 border-2 focus:border-violet-500 rounded-xl"
                 />
               </div>
-              <div>
-                <Label htmlFor="lastName">Last Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-gray-700 font-medium">Last Name</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  className="h-12 border-2 focus:border-violet-500 rounded-xl"
                 />
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2 text-gray-700 font-medium">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-3 w-3 text-blue-600" />
+                </div>
                 Email Address
               </Label>
               <Input
@@ -109,49 +123,80 @@ const PersonalInfoModal = ({ isOpen, onClose, profileData }: PersonalInfoModalPr
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
+                className="h-12 border-2 focus:border-violet-500 rounded-xl"
               />
             </div>
 
-            <div>
-              <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="flex items-center gap-2 text-gray-700 font-medium">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                  <Phone className="h-3 w-3 text-green-600" />
+                </div>
                 Phone Number
               </Label>
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
+                className="h-12 border-2 focus:border-violet-500 rounded-xl"
               />
             </div>
 
-            <div>
-              <Label htmlFor="address" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+            <div className="space-y-2">
+              <Label htmlFor="address" className="flex items-center gap-2 text-gray-700 font-medium">
+                <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+                  <MapPin className="h-3 w-3 text-purple-600" />
+                </div>
                 Address
               </Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleInputChange('address', e.target.value)}
+                className="h-12 border-2 focus:border-violet-500 rounded-xl"
               />
             </div>
 
-            <div>
-              <Label className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-gray-700 font-medium">
+                <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Calendar className="h-3 w-3 text-gray-600" />
+                </div>
                 Date Joined
               </Label>
-              <Input value={profileData.dateJoined} disabled className="bg-gray-50" />
+              <Input 
+                value={profileData.dateJoined} 
+                disabled 
+                className="h-12 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-500" 
+              />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex gap-4 pt-4 sticky bottom-0 bg-white/95 backdrop-blur-md border-t -mx-6 px-6 py-4">
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              className="flex-1 h-12 rounded-xl border-2 hover:bg-gray-50"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Save Changes
+            <Button 
+              onClick={handleSave} 
+              disabled={isLoading}
+              className="flex-1 h-12 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl shadow-lg"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  Save Changes
+                </div>
+              )}
             </Button>
           </div>
         </CardContent>
