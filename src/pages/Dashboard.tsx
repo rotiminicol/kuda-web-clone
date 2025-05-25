@@ -1,13 +1,45 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Plus, Send, CreditCard, Smartphone, Zap } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import { authAPI, transactionAPI } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [showBalance, setShowBalance] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [userResponse, transactionsResponse] = await Promise.all([
+          authAPI.getMe(),
+          transactionAPI.getAll().catch(() => [])
+        ]);
+        
+        setUserData(userResponse);
+        setTransactions(transactionsResponse.slice(0, 4)); // Show only recent 4 transactions
+        console.log('Dashboard data loaded:', { user: userResponse, transactions: transactionsResponse });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [toast]);
 
   const quickActions = [
     { icon: Send, label: "Transfer", href: "/transfer", color: "bg-blue-500" },
@@ -16,12 +48,26 @@ const Dashboard = () => {
     { icon: CreditCard, label: "Cards", href: "/cards", color: "bg-purple-500" },
   ];
 
-  const recentTransactions = [
+  // Fallback transactions for demo
+  const recentTransactions = transactions.length > 0 ? transactions : [
     { id: 1, type: "credit", amount: 50000, description: "Salary Payment", time: "2 hours ago" },
     { id: 2, type: "debit", amount: 2500, description: "Uber Ride", time: "5 hours ago" },
     { id: 3, type: "debit", amount: 1200, description: "Airtime Purchase", time: "1 day ago" },
     { id: 4, type: "credit", amount: 15000, description: "Transfer from John", time: "2 days ago" },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const userName = userData ? `${userData.firstName} ${userData.lastName}` : "User";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,12 +76,14 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Good morning!</h1>
-            <p className="text-gray-600">John Doe</p>
+            <p className="text-gray-600">{userName}</p>
           </div>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/profile">
               <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium">JD</span>
+                <span className="text-white font-medium">
+                  {userData?.firstName?.[0] || 'U'}{userData?.lastName?.[0] || ''}
+                </span>
               </div>
             </Link>
           </Button>

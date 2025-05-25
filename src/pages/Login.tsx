@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authAPI } from "@/services/api";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,15 +21,26 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate login
-    setTimeout(() => {
+    try {
+      const response = await authAPI.login(email, password);
+      console.log('Login successful:', response);
+      
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
+      
       navigate("/dashboard");
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

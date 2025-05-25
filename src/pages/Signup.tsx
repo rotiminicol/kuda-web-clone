@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authAPI } from "@/services/api";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -43,15 +44,34 @@ const Signup = () => {
 
     setLoading(true);
     
-    // Simulate signup
-    setTimeout(() => {
+    try {
+      const signupData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      };
+
+      const response = await authAPI.signup(signupData);
+      console.log('Signup successful:', response);
+      
       toast({
         title: "Account created!",
         description: "Welcome to Kuda. Let's set up your account.",
       });
+      
       navigate("/onboarding");
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast({
+        title: "Signup Failed",
+        description: error instanceof Error ? error.message : "Failed to create account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

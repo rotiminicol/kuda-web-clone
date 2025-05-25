@@ -24,24 +24,60 @@ import {
   Copy,
   Star
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PersonalInfoModal from "@/components/profile/PersonalInfoModal";
 import AccountSettingsModal from "@/components/profile/AccountSettingsModal";
 import NotificationsModal from "@/components/profile/NotificationsModal";
 import HelpSupportModal from "@/components/profile/HelpSupportModal";
+import { authAPI, transactionAPI, cardAPI } from "@/services/api";
 
 const Profile = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [showBalance, setShowBalance] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const profileData = {
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
+  // Fetch user data from Xano
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const [userResponse, transactionsResponse, cardsResponse] = await Promise.all([
+          authAPI.getMe(),
+          transactionAPI.getAll().catch(() => []),
+          cardAPI.getAll().catch(() => [])
+        ]);
+        
+        setUserData(userResponse);
+        setTransactions(transactionsResponse);
+        setCards(cardsResponse);
+        console.log('User data loaded:', userResponse);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [toast]);
+
+  // Fallback data while loading
+  const profileData = userData || {
+    firstName: "User",
+    lastName: "",
+    email: "user@email.com",
     phone: "+234 801 234 5678",
     address: "Lagos, Nigeria",
     dateJoined: "January 2024",
@@ -87,16 +123,21 @@ const Profile = () => {
   const accountStats = [
     { label: "Account Balance", value: showBalance ? profileData.balance : "••••••", icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
     { label: "Account Tier", value: profileData.tier, icon: Shield, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Cards", value: "2", icon: CreditCard, color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "This Month", value: "47 transactions", icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "Active Cards", value: cards.length.toString(), icon: CreditCard, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "This Month", value: `${transactions.length} transactions`, icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
-  const handleLogout = () => {
-    // API call to Xano POST /auth/logout
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+  const handleLogout = async () => {
+    try {
+      authAPI.logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const copyAccountNumber = () => {
@@ -106,6 +147,17 @@ const Profile = () => {
       description: "Account number copied to clipboard",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,7 +193,7 @@ const Profile = () => {
                 <Avatar className="w-16 h-16 border-3 border-white/20 shadow-xl">
                   <AvatarImage src="/placeholder-avatar.jpg" alt={`${profileData.firstName} ${profileData.lastName}`} />
                   <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xl font-bold">
-                    {profileData.firstName[0]}{profileData.lastName[0]}
+                    {profileData.firstName[0]}{profileData.lastName[0] || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>

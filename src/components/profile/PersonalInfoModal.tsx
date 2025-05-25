@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X, Camera, User, Mail, Phone, MapPin, Calendar, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authAPI } from "@/services/api";
 
 interface PersonalInfoModalProps {
   isOpen: boolean;
@@ -34,15 +35,29 @@ const PersonalInfoModal = ({ isOpen, onClose, profileData }: PersonalInfoModalPr
 
   const handleSave = async () => {
     setIsLoading(true);
-    // Simulate API call to Xano PUT /user/profile
-    setTimeout(() => {
+    try {
+      // Here you would update user profile via Xano API
+      // For now, we'll just simulate the call
+      console.log('Updating profile with:', formData);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
         title: "Profile Updated",
         description: "Your personal information has been updated successfully.",
       });
-      setIsLoading(false);
       onClose();
-    }, 1500);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
