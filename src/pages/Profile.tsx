@@ -73,20 +73,35 @@ const Profile = () => {
     fetchUserData();
   }, [toast]);
 
-  // Fallback data while loading
-  const profileData = userData || {
-    firstName: "User",
-    lastName: "",
-    email: "user@email.com",
-    phone: "+234 801 234 5678",
-    address: "Lagos, Nigeria",
-    dateJoined: "January 2024",
-    accountNumber: "1234567890",
+  // Extract name parts from the user data
+  const getNameParts = (userData: any) => {
+    if (!userData) return { firstName: "User", lastName: "" };
+    
+    const fullName = userData.name || userData.firstName || "";
+    const nameParts = fullName.trim().split(" ");
+    
+    return {
+      firstName: nameParts[0] || "User",
+      lastName: nameParts.slice(1).join(" ") || ""
+    };
+  };
+
+  const { firstName, lastName } = getNameParts(userData);
+
+  // Build profile data with proper fallbacks
+  const profileData = {
+    firstName,
+    lastName,
+    email: userData?.email || "user@email.com",
+    phone: userData?.phone || "+234 801 234 5678",
+    address: userData?.address || "Lagos, Nigeria",
+    dateJoined: userData?.created_at ? new Date(userData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "January 2024",
+    accountNumber: userData?.accountNumber || "No account number",
     bank: "Kuda Microfinance Bank",
     accountType: "Savings",
     bvn: "***********",
     tier: "Tier 2",
-    balance: "₦150,000.00"
+    balance: userData?.balance ? `₦${userData.balance.toLocaleString()}` : "₦20,000"
   };
 
   const quickActions = [
@@ -124,7 +139,7 @@ const Profile = () => {
     { label: "Account Balance", value: showBalance ? profileData.balance : "••••••", icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
     { label: "Account Tier", value: profileData.tier, icon: Shield, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Active Cards", value: cards.length.toString(), icon: CreditCard, color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "This Month", value: `${transactions.length} transactions`, icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "This Month", value: transactions.length === 0 ? "No transactions" : `${transactions.length} transactions`, icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
   const handleLogout = async () => {
@@ -141,11 +156,27 @@ const Profile = () => {
   };
 
   const copyAccountNumber = () => {
+    if (profileData.accountNumber === "No account number") {
+      toast({
+        title: "No account number",
+        description: "Account number not available",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     navigator.clipboard.writeText(profileData.accountNumber);
     toast({
       title: "Copied!",
       description: "Account number copied to clipboard",
     });
+  };
+
+  // Get initials safely
+  const getInitials = (firstName: string, lastName: string) => {
+    const firstInitial = firstName && firstName.length > 0 ? firstName[0].toUpperCase() : 'U';
+    const lastInitial = lastName && lastName.length > 0 ? lastName[0].toUpperCase() : '';
+    return firstInitial + lastInitial;
   };
 
   if (loading) {
@@ -191,15 +222,15 @@ const Profile = () => {
             <div className="flex items-start gap-4">
               <div className="relative">
                 <Avatar className="w-16 h-16 border-3 border-white/20 shadow-xl">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt={`${profileData.firstName} ${profileData.lastName}`} />
+                  <AvatarImage src="/placeholder-avatar.jpg" alt={`${firstName} ${lastName}`} />
                   <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xl font-bold">
-                    {profileData.firstName[0]}{profileData.lastName[0] || 'U'}
+                    {getInitials(firstName, lastName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-1">{profileData.firstName} {profileData.lastName}</h2>
+                <h2 className="text-xl font-bold mb-1">{firstName} {lastName}</h2>
                 <div className="flex items-center gap-2 text-white/80 mb-2">
                   <Mail className="h-3 w-3" />
                   <span className="text-sm">{profileData.email}</span>
